@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  auth-service:
+    build: src/auth-service
+    ports:
+      - "3001:3000"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - POSTGRES_URI=postgres://nasi:cnd2023@postgres:5432/authdb
+    depends_on:
+      - postgres
+
+  converter-service:
+    build: src/converter-service
+    ports:
+      - "3002:3000"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - rabbitmq
+
+  notification-service:
+    build: src/notification-service
+    ports:
+      - "3003:3000"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - rabbitmq
+
+  gateway-service:
+    build: src/gateway-service
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+    depends_on:
+      - auth-service
+      - converter-service
+      - notification-service
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # RabbitMQ Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+volumes:
+  pgdata:
